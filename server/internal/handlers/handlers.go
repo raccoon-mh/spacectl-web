@@ -71,6 +71,15 @@ func (h *Handler) CallGRPCMethod(c echo.Context) error {
 		requestBody = make(map[string]interface{})
 	}
 
+	// Filter out metadata fields that shouldn't be passed to gRPC
+	grpcParameters := make(map[string]interface{})
+	for key, value := range requestBody {
+		// Skip metadata fields that are not part of the actual gRPC request
+		if key != "service" && key != "resource" && key != "verb" {
+			grpcParameters[key] = value
+		}
+	}
+
 	// Get service caller
 	serviceCaller, err := h.grpcManager.GetServiceCaller(serviceName)
 	if err != nil {
@@ -78,7 +87,7 @@ func (h *Handler) CallGRPCMethod(c echo.Context) error {
 	}
 
 	// Call method
-	jsonBytes, err := serviceCaller.CallMethod(serviceName, resourceName, verb, requestBody)
+	jsonBytes, err := serviceCaller.CallMethod(serviceName, resourceName, verb, grpcParameters)
 	if err != nil {
 		apiErr, ok := err.(*errors.APIError)
 		if ok {

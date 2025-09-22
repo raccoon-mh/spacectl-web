@@ -42,15 +42,11 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 
 	if resourceName == "Health" || resourceName == "ServerInfo" {
 		// Get service information from ServiceDiscovery (with caching)
-		fmt.Printf("DEBUG: Getting service info for %s\n", serviceName)
 		serviceInfo, err := sc.serviceDiscovery.GetServiceInfo(serviceName)
 		if err != nil {
-			fmt.Printf("DEBUG: Failed to get service info: %v\n", err)
 			return nil, errors.NewAPIError(errors.ErrServiceDescriptorFailed,
 				fmt.Sprintf("Failed to get service info: %v", err))
 		}
-
-		fmt.Printf("DEBUG: Service info retrieved: %s\n", serviceInfo.Name)
 
 		// Check if the resource exists in the discovered service info
 		resource, exists := serviceInfo.Resources[resourceName]
@@ -81,7 +77,6 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 
 		serviceDesc, err = sc.refClient.ResolveService(serviceFullName)
 		if err != nil {
-			fmt.Printf("DEBUG: Failed to resolve service %s: %v\n", serviceFullName, err)
 			return nil, errors.NewAPIError(errors.ErrServiceDescriptorFailed,
 				fmt.Sprintf("Failed to resolve service %s: %v", serviceFullName, err))
 		}
@@ -89,12 +84,11 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 		serviceFullName = fmt.Sprintf(constants.ServiceNamePattern, serviceName, resourceName)
 		serviceDesc, err = sc.refClient.ResolveService(serviceFullName)
 		if err != nil {
-			fmt.Printf("DEBUG: Failed to resolve service: %v\n", err)
 			return nil, errors.NewAPIError(errors.ErrServiceDescriptorFailed, err.Error())
 		}
 	}
 
-	fmt.Printf("DEBUG: Successfully resolved service: %s\n", serviceFullName)
+	// Service resolved successfully
 
 	// Get method descriptor
 	methodDesc := serviceDesc.FindMethodByName(verb)
@@ -108,17 +102,14 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 
 	// Set parameters in the request message
 	if len(parameters) > 0 {
-		fmt.Printf("DEBUG: Setting parameters in request message: %v\n", parameters)
 		// Convert to dynamic message
 		if dynamicMsg, ok := requestMsg.(*dynamic.Message); ok {
 			for key, value := range parameters {
 				if err := sc.setMessageField(dynamicMsg, key, value); err != nil {
-					fmt.Printf("DEBUG: Failed to set field %s: %v\n", key, err)
 					// Continue with other fields even if one fails
+					// Note: Some fields like service, resource, verb are not part of the request message
 				}
 			}
-		} else {
-			fmt.Printf("DEBUG: Warning: requestMsg is not a dynamic.Message, cannot set parameters\n")
 		}
 	}
 
