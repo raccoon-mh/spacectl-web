@@ -33,8 +33,9 @@ type ServiceInfo struct {
 
 // ResourceInfo contains discovered resource information
 type ResourceInfo struct {
-	Name  string   `json:"name"`
-	Verbs []string `json:"verbs"`
+	Name        string   `json:"name"`
+	Verbs       []string `json:"verbs"`
+	ServiceName string   `json:"service_name"` // Full service name for gRPC calls
 }
 
 // NewServiceDiscovery creates a new ServiceDiscovery instance
@@ -87,6 +88,12 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
 
+	// Debug: Log all discovered services
+	fmt.Printf("DEBUG: Discovered %d services for %s:\n", len(services), serviceName)
+	for _, service := range services {
+		fmt.Printf("  - %s\n", service)
+	}
+
 	// Filter services that belong to this service name
 	serviceInfo := &ServiceInfo{
 		Name:       serviceName,
@@ -95,14 +102,16 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 	}
 
 	// Group services by resource type
-	resourceMap := make(map[string][]string) // resource -> methods
+	resourceMap := make(map[string]*ResourceInfo) // resource -> ResourceInfo
 
 	for _, service := range services {
 		// Parse service name to extract resource type
 		resourceName := sd.extractResourceName(service, serviceName)
 		if resourceName == "" {
+			fmt.Printf("DEBUG: Skipping service %s (no resource extracted for %s)\n", service, serviceName)
 			continue
 		}
+		fmt.Printf("DEBUG: Extracted resource '%s' from service '%s'\n", resourceName, service)
 
 		// Get service descriptor
 		serviceDesc, err := refClient.ResolveService(service)
@@ -112,18 +121,29 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 
 		// Get methods for this service
 		methods := serviceDesc.GetMethods()
+		var verbs []string
 		for _, method := range methods {
 			methodName := method.GetName()
-			resourceMap[resourceName] = append(resourceMap[resourceName], methodName)
+			verbs = append(verbs, methodName)
+		}
+
+		// Store resource info with actual service name
+		resourceMap[resourceName] = &ResourceInfo{
+			Name:        resourceName,
+			Verbs:       verbs,
+			ServiceName: service, // Store the actual discovered service name
 		}
 	}
 
-	// Convert to ResourceInfo
-	for resourceName, verbs := range resourceMap {
-		serviceInfo.Resources[resourceName] = &ResourceInfo{
-			Name:  resourceName,
-			Verbs: verbs,
-		}
+	// Copy resource info to service info
+	for resourceName, resourceInfo := range resourceMap {
+		serviceInfo.Resources[resourceName] = resourceInfo
+	}
+
+	// Debug: Log final service info
+	fmt.Printf("DEBUG: Final service info for %s:\n", serviceName)
+	for resourceName, resourceInfo := range serviceInfo.Resources {
+		fmt.Printf("  Resource: %s, Verbs: %v\n", resourceName, resourceInfo.Verbs)
 	}
 
 	return serviceInfo, nil
@@ -139,16 +159,54 @@ func (sd *ServiceDiscovery) extractResourceName(fullServiceName, serviceName str
 		return "ServerInfo"
 	}
 
-	// Extract from spaceone.api.{service}.v1.{resource} pattern
 	parts := strings.Split(fullServiceName, ".")
-	if len(parts) >= 4 && parts[0] == "spaceone" && parts[1] == "api" && parts[3] == "v1" {
+
+	if len(parts) >= 5 && parts[0] == "spaceone" && parts[1] == "api" {
 		// Check if this service belongs to our service name
-		if parts[2] == serviceName {
-			return parts[4]
+		// parts[2] = service name, parts[3] = version (v1/v2), parts[4] = resource
+		discoveredServiceName := parts[2]
+
+		// Handle service name matching with special cases
+		// e.g., inventory_v2 should match both spaceone.api.inventory_v2.v1.* and spaceone.api.inventory.v1.*
+		if discoveredServiceName == serviceName {
+			resourceName := parts[4]
+			fmt.Printf("DEBUG: Found matching resource '%s' for service '%s' (version: %s)\n", resourceName, serviceName, parts[3])
+			return resourceName
+		} else if sd.isCompatibleService(discoveredServiceName, serviceName) {
+			resourceName := parts[4]
+			fmt.Printf("DEBUG: Found compatible resource '%s' for service '%s' (discovered: %s, version: %s)\n", resourceName, serviceName, discoveredServiceName, parts[3])
+			return resourceName
+		} else {
+			fmt.Printf("DEBUG: Service part '%s' doesn't match requested service '%s'\n", discoveredServiceName, serviceName)
 		}
+	} else {
+		fmt.Printf("DEBUG: Service '%s' doesn't match spaceone.api pattern (expected at least 5 parts)\n", fullServiceName)
 	}
 
 	return ""
+}
+
+// isCompatibleService checks if a discovered service is compatible with the requested service
+func (sd *ServiceDiscovery) isCompatibleService(discoveredServiceName, requestedServiceName string) bool {
+	// Handle special compatibility cases
+	// e.g., inventory_v2 should be compatible with inventory
+	if requestedServiceName == "inventory_v2" && discoveredServiceName == "inventory" {
+		return true
+	}
+	if requestedServiceName == "inventory" && discoveredServiceName == "inventory_v2" {
+		return true
+	}
+
+	// Add more compatibility rules as needed
+	// e.g., cost_analysis_v2 and cost_analysis
+	if requestedServiceName == "cost_analysis_v2" && discoveredServiceName == "cost_analysis" {
+		return true
+	}
+	if requestedServiceName == "cost_analysis" && discoveredServiceName == "cost_analysis_v2" {
+		return true
+	}
+
+	return false
 }
 
 // getClient returns a gRPC client and reflection client for the specified service
