@@ -52,6 +52,7 @@ client/*~
 spacectl-web
 spacectl-web.exe
 spacectl-web-*
+spacectl-web.tar.gz
 
 # Go test coverage
 server/coverage.out
