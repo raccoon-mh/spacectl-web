@@ -22,7 +22,7 @@ chmod +x spacectl-web
 ```
 
 Access the web interface at http://localhost:8080
-[image](docs/mainpage.png)
+![](docs/mainpage.png)
 
 ### Key Features
 
