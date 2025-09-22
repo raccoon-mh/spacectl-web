@@ -1,0 +1,197 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# ===========================================
+# Node.js / React Frontend (client/)
+# ===========================================
+
+# Dependencies
+client/node_modules/
+client/.pnp
+client/.pnp.js
+
+# Production builds
+client/build/
+client/web/
+
+# Testing
+client/coverage/
+client/.nyc_output/
+
+# Runtime data
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/lerna-debug.log*
+
+# Environment variables
+client/.env
+client/.env.local
+client/.env.development.local
+client/.env.test.local
+client/.env.production.local
+
+# Cache directories
+client/.cache/
+client/.parcel-cache/
+client/.next/
+client/.nuxt/
+client/.vuepress/dist
+
+# IDE and editor files
+client/.vscode/
+client/.idea/
+client/*.swp
+client/*.swo
+client/*~
+
+# ===========================================
+# Go Backend (server/)
+# ===========================================
+
+# Go build artifacts
+spacectl-web
+spacectl-web.exe
+spacectl-web-*
+
+# Go test coverage
+server/coverage.out
+server/coverage.html
+
+# Go modules cache (if using Go 1.11+)
+server/go.sum.bak
+
+# Go workspace files
+server/go.work
+server/go.work.sum
+
+# ===========================================
+# Build artifacts and temporary files
+# ===========================================
+
+# Server web assets (copied from client build)
+server/web/
+
+# Temporary build files
+*.tmp
+*.temp
+*.log
+
+# ===========================================
+# System files
+# ===========================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.exe
+*.dll
+*.so
+*.dylib
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+*~
+
+# Linux
+*~
+
+# ===========================================
+# IDE and Editor files
+# ===========================================
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===========================================
+# Configuration and secrets
+# ===========================================
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Configuration files with sensitive data
+config.yaml
+config.yml
+config.json
+!config.yaml.example
+!config.yml.example
+!config.json.example
+
+# API keys and secrets
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# ===========================================
+# Documentation and logs
+# ===========================================
+
+# Log files
+*.log
+logs/
+log/
+
+# Documentation build
+docs/_build/
+docs/build/
+
+# ===========================================
+# Package managers
+# ===========================================
+
+# npm
+package-lock.json.bak
+yarn.lock.bak
+
+# ===========================================
+# Backup files
+# ===========================================
+
+*.bak
+*.backup
+*.old
+*.orig

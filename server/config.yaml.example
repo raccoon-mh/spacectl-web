@@ -1,0 +1,17 @@
+token: ey...
+endpoints:
+  identity: grpc+ssl://identity.example.com:443/v1
+  inventory: grpc+ssl://inventory.example.com:443/v1
+  inventory_v2: grpc+ssl://inventory-v2.example.com:443/v1
+  plugin: grpc+ssl://plugin.example.com:443/v1
+  repository: grpc+ssl://repository.example.com:443/v1
+  secret: grpc+ssl://secret.example.com:443/v1
+  monitoring: grpc+ssl://monitoring.example.com:443/v1
+  config: grpc+ssl://config.example.com:443/v1
+  statistics: grpc+ssl://statistics.example.com:443/v1
+  notification: grpc+ssl://notification.example.com:443/v1
+  cost_analysis: grpc+ssl://cost-analysis.example.com:443/v1
+  board: grpc+ssl://board.example.com:443/v1
+  file_manager: grpc+ssl://file-manager.example.com:443/v1
+  dashboard: grpc+ssl://dashboard.example.com:443/v1
+  opsflow: grpc+ssl://opsflow.example.com:443/v1
