@@ -9,7 +9,7 @@ A web-based client for testing and exploring SpaceONE's gRPC APIs with dynamic s
 
 ```bash
 # Download the latest release (compressed)
-wget https://github.com/your-org/spacectl-web/releases/latest/download/spacectl-web.tar.gz
+wget https://github.com/raccoon-mh/spacectl-web/releases/latest/download/spacectl-web.tar.gz
 
 # Extract the compressed file
 tar -xzf spacectl-web.tar.gz
