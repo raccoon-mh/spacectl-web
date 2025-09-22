@@ -39,4 +39,5 @@ make dev
 # build
 ```
 make build
+tar -czf spacectl-web.tar.gz spacectl-web
 ```
