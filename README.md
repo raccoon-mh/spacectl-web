@@ -2,6 +2,13 @@
 
 A web-based client for testing and exploring SpaceONE's gRPC APIs with dynamic service discovery and interactive API testing capabilities.
 
+## Key Features
+
+- **Dynamic Resource Discovery**: Automatically discovers available resources and verbs via gRPC reflection
+- **Interactive Parameter Management**: Easy-to-use interface for adding and editing API parameters
+- **Response History**: Quick access to previous API calls and responses
+- **Cache Management**: Clear cached resources or response history with dedicated controls
+
 
 ## Quick Start
 
@@ -37,19 +44,12 @@ chmod +x spacectl-web
 ![](docs/response_json.png)
 
 
-### Key Features
 
-- **Dynamic Resource Discovery**: Automatically discovers available resources and verbs via gRPC reflection
-- **Interactive Parameter Management**: Easy-to-use interface for adding and editing API parameters
-- **Response History**: Quick access to previous API calls and responses
-- **Cache Management**: Clear cached resources or response history with dedicated controls
-
-
-# Dev
+## Dev
 ```
 make dev
 ```
-# build
+## build
 ```
 make build
 tar -czf spacectl-web.tar.gz spacectl-web
