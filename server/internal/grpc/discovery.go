@@ -3,12 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 	"time"
 
 	"spacectl-web/server/internal/config"
 
+	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -33,9 +35,18 @@ type ServiceInfo struct {
 
 // ResourceInfo contains discovered resource information
 type ResourceInfo struct {
-	Name        string   `json:"name"`
-	Verbs       []string `json:"verbs"`
-	ServiceName string   `json:"service_name"` // Full service name for gRPC calls
+	Name        string                 `json:"name"`
+	Verbs       []string               `json:"verbs"`
+	ServiceName string                 `json:"service_name"` // Full service name for gRPC calls
+	Methods     map[string]*MethodInfo `json:"methods"`      // Method details including required parameters
+}
+
+// MethodInfo contains method information including required parameters
+type MethodInfo struct {
+	Name           string   `json:"name"`
+	RequiredParams []string `json:"required_params"`
+	OptionalParams []string `json:"optional_params"`
+	InputType      string   `json:"input_type"`
 }
 
 // NewServiceDiscovery creates a new ServiceDiscovery instance
@@ -87,12 +98,12 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
-
 	// Debug: Log all discovered services
-	fmt.Printf("DEBUG: Discovered %d services for %s:\n", len(services), serviceName)
+	fmt.Printf("*** Discovered %d services for %s:\n", len(services), serviceName)
 	for _, service := range services {
 		fmt.Printf("  - %s\n", service)
 	}
+	fmt.Println("*** End of discovered services")
 
 	// Filter services that belong to this service name
 	serviceInfo := &ServiceInfo{
@@ -108,10 +119,8 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 		// Parse service name to extract resource type
 		resourceName := sd.extractResourceName(service, serviceName)
 		if resourceName == "" {
-			fmt.Printf("DEBUG: Skipping service %s (no resource extracted for %s)\n", service, serviceName)
 			continue
 		}
-		fmt.Printf("DEBUG: Extracted resource '%s' from service '%s'\n", resourceName, service)
 
 		// Get service descriptor
 		serviceDesc, err := refClient.ResolveService(service)
@@ -122,9 +131,15 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 		// Get methods for this service
 		methods := serviceDesc.GetMethods()
 		var verbs []string
+		methodDetails := make(map[string]*MethodInfo)
+
 		for _, method := range methods {
 			methodName := method.GetName()
 			verbs = append(verbs, methodName)
+
+			// Extract method parameter information
+			methodInfo := sd.extractMethodInfo(method)
+			methodDetails[methodName] = methodInfo
 		}
 
 		// Store resource info with actual service name
@@ -132,19 +147,12 @@ func (sd *ServiceDiscovery) discoverService(serviceName string) (*ServiceInfo, e
 			Name:        resourceName,
 			Verbs:       verbs,
 			ServiceName: service, // Store the actual discovered service name
+			Methods:     methodDetails,
 		}
 	}
 
 	// Copy resource info to service info
-	for resourceName, resourceInfo := range resourceMap {
-		serviceInfo.Resources[resourceName] = resourceInfo
-	}
-
-	// Debug: Log final service info
-	fmt.Printf("DEBUG: Final service info for %s:\n", serviceName)
-	for resourceName, resourceInfo := range serviceInfo.Resources {
-		fmt.Printf("  Resource: %s, Verbs: %v\n", resourceName, resourceInfo.Verbs)
-	}
+	maps.Copy(serviceInfo.Resources, resourceMap)
 
 	return serviceInfo, nil
 }
@@ -170,20 +178,52 @@ func (sd *ServiceDiscovery) extractResourceName(fullServiceName, serviceName str
 		// e.g., inventory_v2 should match both spaceone.api.inventory_v2.v1.* and spaceone.api.inventory.v1.*
 		if discoveredServiceName == serviceName {
 			resourceName := parts[4]
-			fmt.Printf("DEBUG: Found matching resource '%s' for service '%s' (version: %s)\n", resourceName, serviceName, parts[3])
 			return resourceName
 		} else if sd.isCompatibleService(discoveredServiceName, serviceName) {
 			resourceName := parts[4]
-			fmt.Printf("DEBUG: Found compatible resource '%s' for service '%s' (discovered: %s, version: %s)\n", resourceName, serviceName, discoveredServiceName, parts[3])
 			return resourceName
 		} else {
-			fmt.Printf("DEBUG: Service part '%s' doesn't match requested service '%s'\n", discoveredServiceName, serviceName)
 		}
 	} else {
-		fmt.Printf("DEBUG: Service '%s' doesn't match spaceone.api pattern (expected at least 5 parts)\n", fullServiceName)
 	}
 
 	return ""
+}
+
+// extractMethodInfo extracts method parameter information from gRPC method descriptor
+func (sd *ServiceDiscovery) extractMethodInfo(method *desc.MethodDescriptor) *MethodInfo {
+	inputType := method.GetInputType()
+	var requiredParams []string
+	var optionalParams []string
+
+	// Get all fields from the input message type
+	fields := inputType.GetFields()
+
+	for _, field := range fields {
+		fieldName := field.GetName()
+		hasDefault := field.GetDefaultValue() != nil
+		isRepeated := field.IsRepeated()
+
+		// Check if field is required (not optional and not repeated)
+		// In protobuf, fields are optional by default unless they are in a oneof or have specific rules
+		// For simplicity, we'll consider fields with default values as optional
+		if hasDefault || isRepeated {
+			optionalParams = append(optionalParams, fieldName)
+		} else {
+			// This is a simplified check - in practice, you might need more sophisticated logic
+			// based on your protobuf version and field rules
+			requiredParams = append(requiredParams, fieldName)
+		}
+	}
+
+	methodInfo := &MethodInfo{
+		Name:           method.GetName(),
+		RequiredParams: requiredParams,
+		OptionalParams: optionalParams,
+		InputType:      inputType.GetFullyQualifiedName(),
+	}
+
+	return methodInfo
 }
 
 // isCompatibleService checks if a discovered service is compatible with the requested service

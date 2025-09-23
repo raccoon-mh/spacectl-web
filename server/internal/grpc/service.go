@@ -48,14 +48,11 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 			serviceFullName = "spaceone.api.core.v1.ServerInfo"
 		}
 
-		fmt.Printf("DEBUG: Using special service name: %s\n", serviceFullName)
 		serviceDesc, err = sc.refClient.ResolveService(serviceFullName)
 		if err != nil {
-			fmt.Printf("DEBUG: Failed to resolve special service %s: %v\n", serviceFullName, err)
 			return nil, errors.NewAPIError(errors.ErrServiceDescriptorFailed,
 				fmt.Sprintf("Failed to resolve service %s: %v", serviceFullName, err))
 		}
-		fmt.Printf("DEBUG: Successfully resolved special service: %s\n", serviceFullName)
 	} else {
 		// Get service information to find the actual service name
 		serviceInfo, err := sc.serviceDiscovery.GetServiceInfo(serviceName)
@@ -73,31 +70,17 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 
 		// Use the actual discovered service name
 		serviceFullName = resource.ServiceName
-		fmt.Printf("DEBUG: Using discovered service name: %s\n", serviceFullName)
 		serviceDesc, err = sc.refClient.ResolveService(serviceFullName)
 		if err != nil {
-			fmt.Printf("DEBUG: Failed to resolve service %s: %v\n", serviceFullName, err)
 			return nil, errors.NewAPIError(errors.ErrServiceDescriptorFailed, err.Error())
 		}
-		fmt.Printf("DEBUG: Successfully resolved service: %s\n", serviceFullName)
 	}
-
-	// Service resolved successfully
 
 	// Get method descriptor
-	fmt.Printf("DEBUG: Looking for method '%s' in service '%s'\n", verb, serviceFullName)
 	methodDesc := serviceDesc.FindMethodByName(verb)
 	if methodDesc == nil {
-		fmt.Printf("DEBUG: Method '%s' not found in service '%s'\n", verb, serviceFullName)
-		// List available methods for debugging
-		methods := serviceDesc.GetMethods()
-		fmt.Printf("DEBUG: Available methods in service '%s':\n", serviceFullName)
-		for _, method := range methods {
-			fmt.Printf("  - %s\n", method.GetName())
-		}
 		return nil, errors.NewAPIError(errors.ErrMethodNotFound, fmt.Sprintf("method '%s' not found", verb))
 	}
-	fmt.Printf("DEBUG: Found method '%s' in service '%s'\n", verb, serviceFullName)
 
 	// Create request message
 	reqFactory := dynamic.NewMessageFactoryWithDefaults()
@@ -109,6 +92,7 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 		if dynamicMsg, ok := requestMsg.(*dynamic.Message); ok {
 			for key, value := range parameters {
 				if err := sc.setMessageField(dynamicMsg, key, value); err != nil {
+					// Log field setting errors for debugging
 					// Continue with other fields even if one fails
 					// Note: Some fields like service, resource, verb are not part of the request message
 				}
@@ -123,13 +107,17 @@ func (sc *ServiceCaller) CallMethod(serviceName, resourceName, verb string, para
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(constants.DefaultTimeout)*time.Second)
 	defer cancel()
 
-	fmt.Printf("DEBUG: Invoking RPC call: %s.%s with parameters: %v\n", serviceFullName, verb, parameters)
 	resp, err := stub.InvokeRpc(ctx, methodDesc, requestMsg)
 	if err != nil {
-		fmt.Printf("DEBUG: RPC call failed: %v\n", err)
-		return nil, errors.NewAPIError(errors.ErrRPCCallFailed, err.Error())
+		// Log detailed error information for debugging
+		fmt.Printf("ERROR: gRPC call failed for %s.%s.%s\n", serviceName, resourceName, verb)
+		fmt.Printf("ERROR: Error details: %v\n", err)
+		fmt.Printf("ERROR: Request message: %s\n", requestMsg.String())
+
+		// Create more detailed error message
+		errorMsg := fmt.Sprintf("gRPC call failed: %v", err)
+		return nil, errors.NewAPIError(errors.ErrRPCCallFailed, errorMsg)
 	}
-	fmt.Printf("DEBUG: RPC call successful\n")
 
 	// Convert response to JSON
 	respDynamic, ok := resp.(*dynamic.Message)

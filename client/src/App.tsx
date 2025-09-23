@@ -6,10 +6,11 @@ import { ServiceSelector } from './components/ServiceSelector';
 import { ResourceSelector } from './components/ResourceSelector';
 import { VerbSelector } from './components/VerbSelector';
 import { ParameterInput } from './components/ParameterInput';
+import { ConfigInfo } from './components/ConfigInfo';
 import { ResponseCard } from './components/ResponseCard';
 import { useAPI } from './hooks/useAPI';
 import { Resource, Parameter } from './types/api';
-import { Play, RefreshCw, Trash2 } from 'lucide-react';
+import { Play, RefreshCw, Trash2, Settings } from 'lucide-react';
 
 function App() {
   const { loading, error, fetchServices, fetchResources, callGRPCMethod, clearCache } = useAPI();
@@ -35,6 +36,7 @@ function App() {
     duration: string;
     timestamp: Date;
   }>>([]);
+  const [showConfigInfo, setShowConfigInfo] = useState(false);
 
   // Load services on mount
   useEffect(() => {
@@ -115,10 +117,29 @@ function App() {
           : resp
       ));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let errorMessage = 'Unknown error';
+      let errorDetails = '';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // Check if the error has detailed information from the backend
+        if ((err as any).details) {
+          const details = (err as any).details;
+          errorMessage = details.message || err.message;
+          if (details.details) {
+            errorDetails = details.details;
+          }
+          if (details.code) {
+            errorMessage = `[${details.code}] ${errorMessage}`;
+          }
+        }
+      }
+
+      const fullErrorMessage = errorDetails ? `${errorMessage}\n\nDetails: ${errorDetails}` : errorMessage;
+
       setResponses(prev => prev.map(resp =>
         resp.id === requestId
-          ? { ...resp, error: errorMessage, loading: false }
+          ? { ...resp, error: fullErrorMessage, loading: false }
           : resp
       ));
     }
@@ -144,6 +165,7 @@ function App() {
     loadServices();
   };
 
+
   const canExecute = selectedService && selectedResource && selectedVerb;
 
   return (
@@ -159,6 +181,13 @@ function App() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowConfigInfo(true)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Config Info
+              </Button>
               <Button
                 variant="outline"
                 onClick={handleClearCache}
@@ -235,10 +264,15 @@ function App() {
             <ParameterInput
               parameters={parameters}
               onParametersChange={setParameters}
+              methodInfo={selectedResource && selectedVerb ?
+                resources.find(r => r.Name === selectedResource)?.Methods?.[selectedVerb] :
+                undefined
+              }
               disabled={!selectedVerb}
             />
           </CardContent>
         </Card>
+
 
         {/* Response History */}
         <div className="space-y-4">
@@ -279,6 +313,11 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Config Info Modal */}
+        {showConfigInfo && (
+          <ConfigInfo onClose={() => setShowConfigInfo(false)} />
+        )}
       </div>
     </div>
   );

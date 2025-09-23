@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"spacectl-web/server/internal/config"
 	"spacectl-web/server/internal/errors"
 	"spacectl-web/server/internal/grpc"
 	"spacectl-web/server/internal/response"
@@ -15,13 +18,17 @@ import (
 type Handler struct {
 	grpcManager      *grpc.ClientManager
 	serviceDiscovery *grpc.ServiceDiscovery
+	config           *config.Config
+	configFilePath   string
 }
 
 // NewHandler creates a new Handler instance
-func NewHandler(grpcManager *grpc.ClientManager, serviceDiscovery *grpc.ServiceDiscovery) *Handler {
+func NewHandler(grpcManager *grpc.ClientManager, serviceDiscovery *grpc.ServiceDiscovery, cfg *config.Config, configFilePath string) *Handler {
 	return &Handler{
 		grpcManager:      grpcManager,
 		serviceDiscovery: serviceDiscovery,
+		config:           cfg,
+		configFilePath:   configFilePath,
 	}
 }
 
@@ -45,8 +52,9 @@ func (h *Handler) ListResources(c echo.Context) error {
 	resources := make([]map[string]interface{}, 0, len(serviceInfo.Resources))
 	for _, resource := range serviceInfo.Resources {
 		resources = append(resources, map[string]interface{}{
-			"Name":  resource.Name,
-			"Verbs": resource.Verbs,
+			"Name":    resource.Name,
+			"Verbs":   resource.Verbs,
+			"Methods": resource.Methods,
 		})
 	}
 
@@ -126,4 +134,72 @@ func (h *Handler) validateRequest(serviceName, resourceName, verb string) error 
 	}
 
 	return nil
+}
+
+// JWTInfo represents parsed JWT token information
+type JWTInfo struct {
+	Header  map[string]interface{} `json:"header"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
+// ConfigInfo represents configuration information
+type ConfigInfo struct {
+	ConfigFilePath string            `json:"config_file_path"`
+	Endpoints      map[string]string `json:"endpoints"`
+	JWTInfo        *JWTInfo          `json:"jwt_info,omitempty"`
+}
+
+// parseJWT parses a JWT token and returns header and payload
+func parseJWT(token string) (*JWTInfo, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid JWT format")
+	}
+
+	// Parse header
+	headerData, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode header: %w", err)
+	}
+
+	var header map[string]interface{}
+	if err := json.Unmarshal(headerData, &header); err != nil {
+		return nil, fmt.Errorf("failed to parse header: %w", err)
+	}
+
+	// Parse payload
+	payloadData, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode payload: %w", err)
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal(payloadData, &payload); err != nil {
+		return nil, fmt.Errorf("failed to parse payload: %w", err)
+	}
+
+	return &JWTInfo{
+		Header:  header,
+		Payload: payload,
+	}, nil
+}
+
+// GetConfigInfo returns configuration information including JWT token details
+func (h *Handler) GetConfigInfo(c echo.Context) error {
+	configInfo := &ConfigInfo{
+		ConfigFilePath: h.configFilePath,
+		Endpoints:      h.config.Endpoints,
+	}
+
+	// Parse JWT token if available
+	if h.config.Token != "" {
+		jwtInfo, err := parseJWT(h.config.Token)
+		if err != nil {
+			// If JWT parsing fails, still return config info but without JWT details
+			return response.Success(c, configInfo)
+		}
+		configInfo.JWTInfo = jwtInfo
+	}
+
+	return response.Success(c, configInfo)
 }

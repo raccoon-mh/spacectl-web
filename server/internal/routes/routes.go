@@ -14,4 +14,5 @@ func SetupRoutes(e *echo.Echo, handler *handlers.Handler) {
 	api.GET(constants.ServicesPath, handler.ListServices)
 	api.GET(constants.ResourcesPath, handler.ListResources)
 	api.POST(constants.GRPCMethodPath, handler.CallGRPCMethod)
+	api.GET(constants.ConfigInfoPath, handler.GetConfigInfo)
 }

@@ -26,11 +26,13 @@ export const ServiceSelector: React.FC<ServiceSelectorProps> = ({
                 placeholder={loading ? "Loading..." : "Choose service"}
                 disabled={loading || services.length === 0}
                 searchPlaceholder="Search services..."
-                options={services.map(service => ({
-                    value: service,
-                    label: service,
-                    display: <span className="font-mono text-sm">{service}</span>
-                }))}
+                options={services
+                    .sort((a, b) => a.localeCompare(b))
+                    .map(service => ({
+                        value: service,
+                        label: service,
+                        display: <span className="font-mono text-sm">{service}</span>
+                    }))}
             />
         </div>
     );

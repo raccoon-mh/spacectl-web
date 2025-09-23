@@ -36,20 +36,22 @@ export const ResourceSelector: React.FC<ResourceSelectorProps> = ({
                 }
                 disabled={disabled || loading || resources.length === 0}
                 searchPlaceholder="Search resources..."
-                options={resources.map(resource => ({
-                    value: resource.Name,
-                    label: resource.Name,
-                    display: (
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm">{resource.Name}</span>
-                            {resource.ShortNames && resource.ShortNames.length > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                    {resource.ShortNames.join(', ')}
-                                </Badge>
-                            )}
-                        </div>
-                    )
-                }))}
+                options={resources
+                    .sort((a, b) => a.Name.localeCompare(b.Name))
+                    .map(resource => ({
+                        value: resource.Name,
+                        label: resource.Name,
+                        display: (
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">{resource.Name}</span>
+                                {resource.ShortNames && resource.ShortNames.length > 0 && (
+                                    <Badge variant="outline" className="text-xs">
+                                        {resource.ShortNames.join(', ')}
+                                    </Badge>
+                                )}
+                            </div>
+                        )
+                    }))}
             />
         </div>
     );

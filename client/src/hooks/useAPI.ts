@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { APIResponse, Resource, Parameter } from '../types/api';
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+import { API_BASE_URL } from '../constants/api';
 
 // Simple cache implementation
 class APICache {
@@ -116,7 +115,20 @@ export const useAPI = () => {
             const data: APIResponse = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error?.message || `HTTP ${response.status}`);
+                // Create a detailed error object with backend error information
+                const errorDetails = data.error ? {
+                    code: data.error.code,
+                    message: data.error.message,
+                    details: data.error.details
+                } : {
+                    code: response.status,
+                    message: `HTTP ${response.status}`,
+                    details: 'No error details provided'
+                };
+
+                const error = new Error(errorDetails.message);
+                (error as any).details = errorDetails;
+                throw error;
             }
 
             return data;

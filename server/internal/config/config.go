@@ -13,18 +13,6 @@ type Config struct {
 	Endpoints map[string]string `yaml:"endpoints"`
 }
 
-// DiscoveredService represents a service discovered via gRPC reflection
-type DiscoveredService struct {
-	Name      string   `json:"name"`
-	Resources []string `json:"resources"`
-}
-
-// DiscoveredResource represents a resource discovered via gRPC reflection
-type DiscoveredResource struct {
-	Name  string   `json:"name"`
-	Verbs []string `json:"verbs"`
-}
-
 // LoadConfig loads and parses the config.yaml file
 func LoadConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)

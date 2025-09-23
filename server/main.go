@@ -88,14 +88,17 @@ func main() {
 	e.HideBanner = true
 
 	// Setup middleware
-	e.Use(middleware.Logger())
+	var myLoggerConfig = middleware.LoggerConfig{
+		Format:           `[${time_rfc3339}] ${method} [${status}] : ${uri} ${error} [${latency_human}]` + "\n",
+		CustomTimeFormat: "2006-01-02 15:04:05",
+	}
+	e.Use(middleware.LoggerWithConfig(myLoggerConfig))
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 	e.Use(customMiddleware.GRPCMiddleware(grpcManager))
-	// e.Use(customMiddleware.RequestTimingMiddleware()) // Disabled to remove request timing logs
 
 	// Create handlers
-	handler := handlers.NewHandler(grpcManager, serviceDiscovery)
+	handler := handlers.NewHandler(grpcManager, serviceDiscovery, cfg, *configFile)
 
 	// Setup routes
 	routes.SetupRoutes(e, handler)

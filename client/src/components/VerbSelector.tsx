@@ -31,33 +31,35 @@ export const VerbSelector: React.FC<VerbSelectorProps> = ({
                 }
                 disabled={disabled || verbs.length === 0}
                 searchPlaceholder="Search verbs..."
-                options={verbs.map(verb => ({
-                    value: verb,
-                    label: verb,
-                    display: (
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm">{verb}</span>
-                            <Badge
-                                variant={
-                                    verb === 'list' ? 'default' :
-                                        verb === 'get' ? 'secondary' :
-                                            verb.includes('register') || verb.includes('create') ? 'default' :
-                                                verb.includes('update') || verb.includes('modify') ? 'secondary' :
-                                                    verb.includes('delete') || verb.includes('remove') ? 'destructive' :
-                                                        'outline'
-                                }
-                                className="text-xs"
-                            >
-                                {verb === 'list' ? 'READ' :
-                                    verb === 'get' ? 'READ' :
-                                        verb.includes('register') || verb.includes('create') ? 'CREATE' :
-                                            verb.includes('update') || verb.includes('modify') ? 'UPDATE' :
-                                                verb.includes('delete') || verb.includes('remove') ? 'DELETE' :
-                                                    'ACTION'}
-                            </Badge>
-                        </div>
-                    )
-                }))}
+                options={verbs
+                    .sort((a, b) => a.localeCompare(b))
+                    .map(verb => ({
+                        value: verb,
+                        label: verb,
+                        display: (
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">{verb}</span>
+                                <Badge
+                                    variant={
+                                        verb === 'list' ? 'default' :
+                                            verb === 'get' ? 'secondary' :
+                                                verb.includes('register') || verb.includes('create') ? 'default' :
+                                                    verb.includes('update') || verb.includes('modify') ? 'secondary' :
+                                                        verb.includes('delete') || verb.includes('remove') ? 'destructive' :
+                                                            'outline'
+                                    }
+                                    className="text-xs"
+                                >
+                                    {verb === 'list' ? 'READ' :
+                                        verb === 'get' ? 'READ' :
+                                            verb.includes('register') || verb.includes('create') ? 'CREATE' :
+                                                verb.includes('update') || verb.includes('modify') ? 'UPDATE' :
+                                                    verb.includes('delete') || verb.includes('remove') ? 'DELETE' :
+                                                        'ACTION'}
+                                </Badge>
+                            </div>
+                        )
+                    }))}
             />
         </div>
     );

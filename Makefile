@@ -13,6 +13,7 @@ CLIENT_DIR := client
 SERVER_DIR := server
 BINARY_NAME := spacectl-web
 PORT := 8080
+CONFIG_FILE := ~/.spaceone/environments/dev.yml
 
 # Default target
 .DEFAULT_GOAL := help
@@ -37,15 +38,27 @@ build: ## Build client and server (creates single executable)
 
 # Development
 dev: ## Start development servers (client + server)
-	@echo "$(BLUE)Starting development environment...$(NC)"
+	@echo "$(BLUE)Starting development environment on port $(PORT)...$(NC)"
 	@echo "$(YELLOW)Starting React dev server on port 3000...$(NC)"
-	cd $(CLIENT_DIR) && npm start &
+	@echo "$(YELLOW)Backend API will be available at: http://localhost:$(PORT)$(NC)"
+	cd $(CLIENT_DIR) && REACT_APP_API_URL=http://localhost:$(PORT) npm start &
 	@echo "$(YELLOW)Starting Go server on port $(PORT)...$(NC)"
-	cd $(SERVER_DIR) && go run main.go --port $(PORT) &
+	cd $(SERVER_DIR) && go run main.go --port $(PORT) --config $(CONFIG_FILE) &
 	@echo "$(GREEN)Development servers started!$(NC)"
 	@echo "$(BLUE)React client: http://localhost:3000$(NC)"
 	@echo "$(BLUE)Go server: http://localhost:$(PORT)$(NC)"
 	@echo "$(YELLOW)Press Ctrl+C to stop all servers$(NC)"
+
+# Start only the backend server
+dev-server: ## Start only the backend server
+	@echo "$(BLUE)Starting backend server on port $(PORT)...$(NC)"
+	cd $(SERVER_DIR) && go run main.go --port $(PORT)
+
+# Start only the frontend client
+dev-client: ## Start only the frontend client
+	@echo "$(BLUE)Starting frontend client on port 3000...$(NC)"
+	@echo "$(YELLOW)Backend API will be available at: http://localhost:$(PORT)$(NC)"
+	cd $(CLIENT_DIR) && REACT_APP_API_URL=http://localhost:$(PORT) npm start
 
 # Clean
 clean: ## Clean build artifacts
