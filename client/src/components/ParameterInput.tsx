@@ -56,7 +56,7 @@ export const ParameterInput: React.FC<ParameterInputProps> = ({
             setAvailableParams([]);
             setHasInitialized(false);
         }
-    }, [methodInfo, onParametersChange]);
+    }, [methodInfo, onParametersChange, hasInitialized, parameters]);
 
     // Reset initialization flag when methodInfo changes
     useEffect(() => {

@@ -3,7 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
-import { Copy, Download, Clock, CheckCircle, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Download, Clock, CheckCircle, XCircle, ChevronDown, ChevronUp, Table, Eye, Maximize2 } from 'lucide-react';
+import { AdvancedTable } from './AdvancedTable';
+import { TableModal } from './TableModal';
+import { JsonModal } from './JsonModal';
 
 interface ResponseCardProps {
     response: {
@@ -25,6 +28,9 @@ interface ResponseCardProps {
 export const ResponseCard: React.FC<ResponseCardProps> = ({ response }) => {
     const [copied, setCopied] = useState(false);
     const [expanded, setExpanded] = useState(true);
+    const [viewMode, setViewMode] = useState<'json' | 'table'>('json');
+    const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+    const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
 
     const formatJSON = (data: any) => {
         try {
@@ -95,8 +101,70 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({ response }) => {
         return info;
     };
 
+    // Function to prepare table data
+    const prepareTableData = (data: any) => {
+        if (!data || typeof data !== 'object') {
+            return [];
+        }
+
+        // If results array exists (e.g., plugin list)
+        if (data.results && Array.isArray(data.results)) {
+            return data.results;
+        }
+
+        // If direct array
+        if (Array.isArray(data)) {
+            if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+                return data;
+            } else {
+                // Convert simple array to object array
+                return data.map((item, index) => ({ index, value: item }));
+            }
+        }
+
+        // If single object, convert to Key-Value format
+        return Object.entries(data).map(([key, value]) => ({ key, value }));
+    };
+
+    // Function to render data in table format
+    const renderTable = (data: any) => {
+        const tableData = prepareTableData(data);
+
+        if (tableData.length === 0) {
+            return <div className="text-sm text-muted-foreground">Data cannot be displayed in table format.</div>;
+        }
+
+        // If results array exists
+        if (data.results && Array.isArray(data.results)) {
+            return <AdvancedTable data={tableData} title={`Results (${data.results.length} items)`} />;
+        }
+
+        // If direct array
+        if (Array.isArray(data)) {
+            if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+                return <AdvancedTable data={tableData} title={`Array (${data.length} items)`} />;
+            } else {
+                return <AdvancedTable data={tableData} title={`Array (${data.length} items)`} />;
+            }
+        }
+
+        // If single object
+        return <AdvancedTable data={tableData} title="Object Properties" />;
+    };
+
+    // Generate table title for modal
+    const getTableModalTitle = (data: any) => {
+        if (data.results && Array.isArray(data.results)) {
+            return `Results (${data.results.length} items)`;
+        }
+        if (Array.isArray(data)) {
+            return `Array (${data.length} items)`;
+        }
+        return 'Object Properties';
+    };
+
     return (
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className={`border-l-4 ${response.error ? 'border-l-red-500 bg-red-50/30' : 'border-l-blue-500'}`}>
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -121,6 +189,44 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({ response }) => {
                     <div className="flex items-center gap-2">
                         {response.response && (
                             <>
+                                <div className="flex items-center gap-1 border rounded-md">
+                                    <Button
+                                        variant={viewMode === 'json' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('json')}
+                                        disabled={response.loading}
+                                        className="h-8 px-3"
+                                    >
+                                        <Eye className="h-4 w-4 mr-1" />
+                                        JSON
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'table' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('table')}
+                                        disabled={response.loading}
+                                        className="h-8 px-3"
+                                    >
+                                        <Table className="h-4 w-4 mr-1" />
+                                        Table
+                                    </Button>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (viewMode === 'json') {
+                                            setIsJsonModalOpen(true);
+                                        } else {
+                                            setIsTableModalOpen(true);
+                                        }
+                                    }}
+                                    disabled={response.loading}
+                                    title={viewMode === 'json' ? "View Full Screen JSON" : "View Full Screen Table"}
+                                >
+                                    <Maximize2 className="h-4 w-4 mr-1" />
+                                    Full Screen
+                                </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -189,23 +295,50 @@ export const ResponseCard: React.FC<ResponseCardProps> = ({ response }) => {
                     )}
 
                     {response.error && (
-                        <div className="p-4 border border-destructive/20 bg-destructive/10 rounded-md">
-                            <h4 className="font-semibold text-destructive mb-2">Error</h4>
-                            <p className="text-sm text-destructive/80">{response.error}</p>
+                        <div className="p-4 border border-red-300 bg-red-50 rounded-md">
+                            <h4 className="font-semibold text-red-700 mb-2 flex items-center gap-2">
+                                <XCircle className="h-4 w-4" />
+                                Error
+                            </h4>
+                            <p className="text-sm text-red-600 font-mono">{response.error}</p>
                         </div>
                     )}
 
                     {response.response && !response.loading && (
                         <div className="space-y-2">
                             <h4 className="font-semibold">Response</h4>
-                            <Textarea
-                                value={formatJSON(response.response)}
-                                readOnly
-                                className="min-h-[200px] font-mono text-sm resize-none"
-                            />
+                            {viewMode === 'json' ? (
+                                <Textarea
+                                    value={formatJSON(response.response)}
+                                    readOnly
+                                    className="min-h-[200px] font-mono text-sm resize-none"
+                                />
+                            ) : (
+                                renderTable(response.response)
+                            )}
                         </div>
                     )}
                 </CardContent>
+            )}
+
+            {/* Full Screen JSON Modal */}
+            {response.response && (
+                <JsonModal
+                    isOpen={isJsonModalOpen}
+                    onClose={() => setIsJsonModalOpen(false)}
+                    data={response.response}
+                    title="API Response"
+                />
+            )}
+
+            {/* Full Screen Table Modal */}
+            {response.response && (
+                <TableModal
+                    isOpen={isTableModalOpen}
+                    onClose={() => setIsTableModalOpen(false)}
+                    data={prepareTableData(response.response)}
+                    title={getTableModalTitle(response.response)}
+                />
             )}
         </Card>
     );
