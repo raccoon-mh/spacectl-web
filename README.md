@@ -19,10 +19,23 @@ chmod +x spacectl-web
 
 # Run with your SpaceONE environment configuration
 ./spacectl-web --config ~/.spaceone/environments/<YOUR_ENV>.yml --port 8080
+
+# open browser http://localhost:8080
 ```
 
-Access the web interface at http://localhost:8080
+### Access the web interface at http://localhost:8080
+
+#### main page
 ![](docs/mainpage.png)
+
+#### config modal
+![](docs/configinfo.png)
+
+#### response card
+![](docs/response.png)
+![](docs/response_table.png)
+![](docs/response_json.png)
+
 
 ### Key Features
 
